@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -16,6 +17,7 @@ import (
 type apiConfig struct {
 	fileServerHits atomic.Int32
 	dbQueries      *database.Queries
+	platform       string
 }
 
 func handlerReadiness(w http.ResponseWriter, req *http.Request) {
@@ -36,7 +38,12 @@ func (apiC *apiConfig) handlerCountRequests(w http.ResponseWriter, req *http.Req
 	w.Write([]byte(s))
 }
 
-func (apiC *apiConfig) handlerResetCount(w http.ResponseWriter, req *http.Request) {
+func (apiC *apiConfig) handlerReset(w http.ResponseWriter, req *http.Request) {
+	if apiC.platform != "dev" {
+		w.WriteHeader(403)
+		return
+	}
+	apiC.dbQueries.DeleteUsers(context.Background())
 	w.WriteHeader(http.StatusOK)
 	apiC.fileServerHits = atomic.Int32{}
 	s := fmt.Sprintf("Hits: %v", apiC.fileServerHits.Load())
@@ -68,15 +75,17 @@ func main() {
 	apiC := &apiConfig{
 		fileServerHits: atomic.Int32{},
 		dbQueries:      database.New(db),
+		platform:       os.Getenv("PLATFORM"),
 	}
 
 	servMux.Handle("/app/", http.StripPrefix("/app", apiC.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
 
 	servMux.HandleFunc("GET /api/healthz", handlerReadiness)
 	servMux.HandleFunc("POST /api/validate_chirp", handlerValidateChip)
+	servMux.HandleFunc("POST /api/users", apiC.handlerUsers)
 
 	servMux.HandleFunc("GET /admin/metrics", apiC.handlerCountRequests)
-	servMux.HandleFunc("POST /admin/reset", apiC.handlerResetCount)
+	servMux.HandleFunc("POST /admin/reset", apiC.handlerReset)
 
 	err = server.ListenAndServe()
 	fmt.Println(err)
