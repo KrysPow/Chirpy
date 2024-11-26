@@ -12,7 +12,59 @@ import (
 	"github.com/google/uuid"
 )
 
-func (apiC *apiConfig) handlerChirps(w http.ResponseWriter, req *http.Request) {
+type respChirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (apiC *apiConfig) handlerGetSingleChirp(w http.ResponseWriter, req *http.Request) {
+	chirpID := req.PathValue("chirpID")
+	uuidChirpID, err := uuid.Parse(chirpID)
+	if err != nil {
+		respondWithError(w, 404, fmt.Sprintf("%s is not a valid chirpID", chirpID))
+		return
+	}
+
+	chirp, err := apiC.dbQueries.GetChirp(context.Background(), uuidChirpID)
+	if err != nil {
+		respondWithError(w, 404, fmt.Sprintf("%s is not a valid chirpID", chirpID))
+		return
+	}
+
+	respondWithJson(w, 200, respChirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
+	})
+}
+
+func (apiC *apiConfig) handlerGetAllChirps(w http.ResponseWriter, req *http.Request) {
+	responseChirps := []respChirp{}
+
+	chirps, err := apiC.dbQueries.GetAllChirps(context.Background())
+	if err != nil {
+		fmt.Println("Problems getting chirps from dB: ", err)
+	}
+
+	for i := range chirps {
+		responseChirps = append(responseChirps, respChirp{
+			ID:        chirps[i].ID,
+			CreatedAt: chirps[i].CreatedAt,
+			UpdatedAt: chirps[i].UpdatedAt,
+			Body:      chirps[i].Body,
+			UserID:    chirps[i].UserID,
+		})
+	}
+
+	respondWithJson(w, 200, responseChirps)
+}
+
+func (apiC *apiConfig) handlerPostChirps(w http.ResponseWriter, req *http.Request) {
 	type postChirp struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -28,7 +80,7 @@ func (apiC *apiConfig) handlerChirps(w http.ResponseWriter, req *http.Request) {
 
 	clean_chirp, err := validateChirp(posted_chirp.Body)
 	if err != nil {
-		fmt.Println(err)
+		respondWithError(w, 500, "Chirp is too long")
 		return
 	}
 
@@ -39,14 +91,6 @@ func (apiC *apiConfig) handlerChirps(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Println("Saving chirp to database failed: ", err)
 		return
-	}
-
-	type respChirp struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Body      string    `json:"body"`
-		UserID    uuid.UUID `json:"user_id"`
 	}
 
 	respondWithJson(w, 201, respChirp{

@@ -82,7 +82,9 @@ func main() {
 
 	servMux.HandleFunc("GET /api/healthz", handlerReadiness)
 	servMux.HandleFunc("POST /api/users", apiC.handlerUsers)
-	servMux.HandleFunc("POST /api/chirps", apiC.handlerChirps)
+	servMux.HandleFunc("POST /api/chirps", apiC.handlerPostChirps)
+	servMux.HandleFunc("GET /api/chirps", apiC.handlerGetAllChirps)
+	servMux.HandleFunc("GET /api/chirps/{chirpID}", apiC.handlerGetSingleChirp)
 
 	servMux.HandleFunc("GET /admin/metrics", apiC.handlerCountRequests)
 	servMux.HandleFunc("POST /admin/reset", apiC.handlerReset)
