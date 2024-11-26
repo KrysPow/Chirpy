@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 func handlerValidateChip(w http.ResponseWriter, req *http.Request) {
@@ -11,9 +12,8 @@ func handlerValidateChip(w http.ResponseWriter, req *http.Request) {
 		Body string `json:"body"`
 	}
 
-	type returnVal struct {
-		Valid bool   `json:"valid"`
-		Error string `json:"error"`
+	type cleanBody struct {
+		CleanBody string `json:"cleaned_body"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -26,21 +26,29 @@ func handlerValidateChip(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	respBody := returnVal{}
 	if len(params.Body) > 140 {
-		respBody.Error = "Chirp is too long"
-		w.WriteHeader(400)
+		respondWithError(w, 400, "Chirp is too long")
 	} else {
-		respBody.Valid = true
-		w.WriteHeader(200)
-	}
-	dat, err := json.Marshal(respBody)
-	if err != nil {
-		w.Write([]byte(fmt.Sprintf("{error: %s}", "Json encoding went wrong")))
-		w.WriteHeader(500)
-		return
-	}
+		respondWithJson(w, 200, cleanBody{CleanBody: censorProfaneWords(params.Body)})
 
-	w.Write(dat)
+	}
+}
 
+func censorProfaneWords(s string) string {
+	profaneWords := []string{
+		"kerfuffle",
+		"sharbert",
+		"fornax"}
+
+	var clean_s string
+	sSplitted := strings.Split(s, " ")
+	for _, profWord := range profaneWords {
+		for i := range sSplitted {
+			if strings.Contains(strings.ToLower(sSplitted[i]), profWord) {
+				sSplitted[i] = strings.Replace(strings.ToLower(sSplitted[i]), profWord, "****", 1)
+			}
+		}
+		clean_s = strings.Join(sSplitted, " ")
+	}
+	return clean_s
 }
