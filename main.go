@@ -1,13 +1,21 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/Kryspow/chirpy/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
 	fileServerHits atomic.Int32
+	dbQueries      *database.Queries
 }
 
 func handlerReadiness(w http.ResponseWriter, req *http.Request) {
@@ -44,6 +52,13 @@ func (apiC *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 func main() {
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal("Could not connect database: ", err)
+	}
+
 	servMux := http.NewServeMux()
 	server := http.Server{
 		Handler: servMux,
@@ -52,6 +67,7 @@ func main() {
 
 	apiC := &apiConfig{
 		fileServerHits: atomic.Int32{},
+		dbQueries:      database.New(db),
 	}
 
 	servMux.Handle("/app/", http.StripPrefix("/app", apiC.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
@@ -62,6 +78,6 @@ func main() {
 	servMux.HandleFunc("GET /admin/metrics", apiC.handlerCountRequests)
 	servMux.HandleFunc("POST /admin/reset", apiC.handlerResetCount)
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	fmt.Println(err)
 }
