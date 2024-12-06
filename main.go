@@ -18,6 +18,7 @@ type apiConfig struct {
 	fileServerHits atomic.Int32
 	dbQueries      *database.Queries
 	platform       string
+	secret         string
 }
 
 func handlerReadiness(w http.ResponseWriter, req *http.Request) {
@@ -76,15 +77,19 @@ func main() {
 		fileServerHits: atomic.Int32{},
 		dbQueries:      database.New(db),
 		platform:       os.Getenv("PLATFORM"),
+		secret:         os.Getenv("SECRET"),
 	}
 
 	servMux.Handle("/app/", http.StripPrefix("/app", apiC.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
 
 	servMux.HandleFunc("GET /api/healthz", handlerReadiness)
-	servMux.HandleFunc("POST /api/users", apiC.handlerUsers)
+	servMux.HandleFunc("POST /api/login", apiC.handlerLogin)
 	servMux.HandleFunc("POST /api/chirps", apiC.handlerPostChirps)
 	servMux.HandleFunc("GET /api/chirps", apiC.handlerGetAllChirps)
 	servMux.HandleFunc("GET /api/chirps/{chirpID}", apiC.handlerGetSingleChirp)
+	servMux.HandleFunc("POST /api/refresh", apiC.handlerRefresh)
+	servMux.HandleFunc("POST /api/revoke", apiC.handlerRevoke)
+	servMux.HandleFunc("POST /api/users", apiC.handlerUsers)
 
 	servMux.HandleFunc("GET /admin/metrics", apiC.handlerCountRequests)
 	servMux.HandleFunc("POST /admin/reset", apiC.handlerReset)

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Kryspow/chirpy/internal/auth"
 	"github.com/Kryspow/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -77,6 +78,19 @@ func (apiC *apiConfig) handlerPostChirps(w http.ResponseWriter, req *http.Reques
 		fmt.Println("Decoding went wrong: ", err)
 		return
 	}
+
+	token, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		fmt.Println("Not autorized, ", err)
+	}
+
+	user_id, err := auth.ValidateJWT(token, apiC.secret)
+	if err != nil {
+		respondWithJson(w, 401, "Unauthorized")
+		return
+	}
+
+	posted_chirp.UserID = user_id
 
 	clean_chirp, err := validateChirp(posted_chirp.Body)
 	if err != nil {

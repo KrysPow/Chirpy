@@ -7,12 +7,24 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Kryspow/chirpy/internal/auth"
+	"github.com/Kryspow/chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
+type respUser struct {
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
+}
+
 func (apiC *apiConfig) handlerUsers(w http.ResponseWriter, req *http.Request) {
 	type email struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -23,17 +35,16 @@ func (apiC *apiConfig) handlerUsers(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user, err := apiC.dbQueries.CreateUser(context.Background(), posted_email.Email)
+	hashed_pwd, err := auth.HashPassword(posted_email.Password)
+	if err != nil {
+		fmt.Println("Hashing password went wrong: ", err)
+	}
+
+	user, err := apiC.dbQueries.CreateUser(context.Background(), database.CreateUserParams{Email: posted_email.Email,
+		HashedPassword: hashed_pwd})
 	if err != nil {
 		fmt.Println("User creation went wrong: ", err)
 		return
-	}
-
-	type respUser struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Email     string    `json:"email"`
 	}
 
 	respondWithJson(w, 201, respUser{
