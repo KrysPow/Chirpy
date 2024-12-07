@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -19,6 +20,47 @@ type respChirp struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Body      string    `json:"body"`
 	UserID    uuid.UUID `json:"user_id"`
+}
+
+func (apiC *apiConfig) handlerDeleteChirp(w http.ResponseWriter, req *http.Request) {
+	chirpId := req.PathValue("chirpID")
+	uuidChirpId, err := uuid.Parse(chirpId)
+	if err != nil {
+		respondWithError(w, 404, fmt.Sprintf("%s is not a valid chirpID", chirpId))
+		return
+	}
+
+	token, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, 401, "token not found")
+		return
+	}
+
+	userId, err := auth.ValidateJWT(token, apiC.secret)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	chirp, err := apiC.dbQueries.GetChirp(context.Background(), uuidChirpId)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	if userId != chirp.UserID {
+		respondWithError(w, 403, "deletion failed, you are not the author of this chirp")
+		return
+	}
+
+	err = apiC.dbQueries.DeleteChirpByID(context.Background(), uuidChirpId)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	respondWithJson(w, 204, "")
 }
 
 func (apiC *apiConfig) handlerGetSingleChirp(w http.ResponseWriter, req *http.Request) {

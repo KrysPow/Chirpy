@@ -84,9 +84,11 @@ func main() {
 
 	servMux.HandleFunc("GET /api/healthz", handlerReadiness)
 	servMux.HandleFunc("POST /api/login", apiC.handlerLogin)
-	servMux.HandleFunc("POST /api/chirps", apiC.handlerPostChirps)
 	servMux.HandleFunc("GET /api/chirps", apiC.handlerGetAllChirps)
 	servMux.HandleFunc("GET /api/chirps/{chirpID}", apiC.handlerGetSingleChirp)
+	servMux.HandleFunc("POST /api/chirps", apiC.handlerPostChirps)
+	servMux.HandleFunc("DELETE /api/chirps/{chirpID}", apiC.handlerDeleteChirp)
+	servMux.HandleFunc("POST /api/polka/webhooks", apiC.handlerPolkaWebhook)
 	servMux.HandleFunc("POST /api/refresh", apiC.handlerRefresh)
 	servMux.HandleFunc("POST /api/revoke", apiC.handlerRevoke)
 	servMux.HandleFunc("POST /api/users", apiC.handlerUsers)

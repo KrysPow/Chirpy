@@ -20,6 +20,7 @@ type respUser struct {
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 func (apiC *apiConfig) handlerUsers(w http.ResponseWriter, req *http.Request) {
@@ -49,10 +50,11 @@ func (apiC *apiConfig) handlerUsers(w http.ResponseWriter, req *http.Request) {
 	}
 
 	respondWithJson(w, 201, respUser{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
+		ID:          user.ID,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }
 
@@ -107,9 +109,10 @@ func (apiC *apiConfig) handlerUpdateUsers(w http.ResponseWriter, req *http.Reque
 	}
 
 	respondWithJson(w, 200, respUser{ID: user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     token})
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Email:       user.Email,
+		Token:       token,
+		IsChirpyRed: user.IsChirpyRed})
 
 }
