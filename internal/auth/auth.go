@@ -85,5 +85,12 @@ func MakeFreshToken() (string, error) {
 	}
 
 	return hex.EncodeToString(rand_data), nil
+}
 
+func GetAPIKey(headers http.Header) (string, error) {
+	string_apiKey := headers.Get("Authorization")
+	if len(strings.Fields(string_apiKey)) != 2 {
+		return "", fmt.Errorf("API-key in wrong format")
+	}
+	return strings.Fields(string_apiKey)[1], nil
 }

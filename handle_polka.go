@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Kryspow/chirpy/internal/auth"
 	"github.com/google/uuid"
 )
 
@@ -19,10 +20,20 @@ func (apiC *apiConfig) handlerPolkaWebhook(w http.ResponseWriter, req *http.Requ
 		Data  Data   `json:"data"`
 	}
 
+	apiKey, err := auth.GetAPIKey(req.Header)
+	if err != nil {
+		log.Println(err)
+	}
+
+	if apiKey != apiC.polkaKey {
+		respondWithError(w, 401, "wrong API-key")
+		return
+	}
+
 	webhook := Webhook{}
 
 	decoder := json.NewDecoder(req.Body)
-	err := decoder.Decode(&webhook)
+	err = decoder.Decode(&webhook)
 	if err != nil {
 		log.Println(err)
 		return
