@@ -90,6 +90,7 @@ func main() {
 	servMux.HandleFunc("POST /api/refresh", apiC.handlerRefresh)
 	servMux.HandleFunc("POST /api/revoke", apiC.handlerRevoke)
 	servMux.HandleFunc("POST /api/users", apiC.handlerUsers)
+	servMux.HandleFunc("PUT /api/users", apiC.handlerUpdateUsers)
 
 	servMux.HandleFunc("GET /admin/metrics", apiC.handlerCountRequests)
 	servMux.HandleFunc("POST /admin/reset", apiC.handlerReset)

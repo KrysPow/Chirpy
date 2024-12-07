@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -53,4 +54,62 @@ func (apiC *apiConfig) handlerUsers(w http.ResponseWriter, req *http.Request) {
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
 	})
+}
+
+func (apiC *apiConfig) handlerUpdateUsers(w http.ResponseWriter, req *http.Request) {
+	type newPwdEmail struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	new_pwd_email := newPwdEmail{}
+
+	token, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, 401, "token is missing")
+		return
+	}
+
+	userId, err := auth.ValidateJWT(token, apiC.secret)
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, 401, "token is not valid")
+		return
+	}
+
+	decoder := json.NewDecoder(req.Body)
+	err = decoder.Decode(&new_pwd_email)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	hashed_pwd, err := auth.HashPassword(new_pwd_email.Password)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	err = apiC.dbQueries.UpdateEmailAndPassword(context.Background(), database.UpdateEmailAndPasswordParams{
+		ID:             userId,
+		Email:          new_pwd_email.Email,
+		HashedPassword: hashed_pwd,
+	})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	user, err := apiC.dbQueries.GetUserById(context.Background(), userId)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	respondWithJson(w, 200, respUser{ID: user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+		Token:     token})
+
 }
